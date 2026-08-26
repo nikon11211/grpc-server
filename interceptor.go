@@ -90,10 +90,7 @@ func tracingInterceptor(cfg *Config) grpc.UnaryServerInterceptor {
 
 func extractMethod(fullMethod string) string {
 	parts := strings.Split(fullMethod, "/")
-	if len(parts) > 0 {
-		return parts[len(parts)-1]
-	}
-	return fullMethod
+	return parts[len(parts)-1]
 }
 
 func validationInterceptor(validator protovalidate.Validator) grpc.UnaryServerInterceptor {

@@ -1,9 +1,12 @@
 package grpc
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	"buf.build/go/protovalidate"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -16,6 +19,11 @@ import (
 type Server struct {
 	Logger
 	*grpc.Server
+	metricsServer *http.Server
+}
+
+var newValidator = func() (protovalidate.Validator, error) {
+	return protovalidate.New()
 }
 
 func New(cfg *Config, logger Logger, opts ...ServerOption) (*Server, error) {
@@ -30,17 +38,23 @@ func New(cfg *Config, logger Logger, opts ...ServerOption) (*Server, error) {
 		opt(options)
 	}
 
+	var metricsServer *http.Server
 	if cfg.MetricsHost != "" {
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		metricsServer = &http.Server{
+			Addr:              cfg.MetricsHost,
+			Handler:           mux,
+			ReadHeaderTimeout: 10 * time.Second,
+		}
 		go func() {
-			mux := http.NewServeMux()
-			mux.Handle("/metrics", promhttp.Handler())
-			if err := http.ListenAndServe(cfg.MetricsHost, mux); err != nil {
+			if err := metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				logger.Error(fmt.Sprintf("(%s) metrics server error: %v", trace, err))
 			}
 		}()
 	}
 
-	validator, err := protovalidate.New()
+	validator, err := newValidator()
 	if err != nil {
 		logger.Error(fmt.Sprintf("(%s) protovalidate initialization error: %v", trace, err))
 	}
@@ -82,8 +96,9 @@ func New(cfg *Config, logger Logger, opts ...ServerOption) (*Server, error) {
 	srv := grpc.NewServer(serverOpts...)
 
 	return &Server{
-		Logger: logger,
-		Server: srv,
+		Logger:        logger,
+		Server:        srv,
+		metricsServer: metricsServer,
 	}, nil
 }
 
@@ -101,4 +116,9 @@ func (s *Server) Run(cfg Config) error {
 
 func (s *Server) Stop() {
 	s.GracefulStop()
+	if s.metricsServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = s.metricsServer.Shutdown(ctx)
+	}
 }

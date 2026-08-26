@@ -15,11 +15,14 @@
   <a href="https://codecov.io/gh/nikon11211/grpc-server">
     <img src="https://codecov.io/gh/nikon11211/grpc-server/branch/main/graph/badge.svg" alt="Coverage"/>
   </a>
+  <a href="https://sonarcloud.io/summary/overall?id=nikon11211_grpc-server">
+    <img src="https://sonarcloud.io/api/project_badges/measure?project=nikon11211_grpc-server&metric=coverage" alt="SonarCloud Coverage"/>
+  </a>
   <a href="https://opensource.org/licenses/MIT">
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/>
   </a>
   <a href="https://golang.org/">
-    <img src="https://img.shields.io/badge/Go-%3E%3D%201.21-blue" alt="Go Version"/>
+    <img src="https://img.shields.io/badge/Go-%3E%3D%201.26-blue" alt="Go Version"/>
   </a>
   <a href="https://prometheus.io/">
     <img src="https://img.shields.io/badge/Prometheus-Ready-red" alt="Prometheus"/>
@@ -221,22 +224,33 @@ EnableTracing     bool          // Enable OpenTelemetry tracing
 }
 ```
 
-## 🧪 Testing
+## 🧪 Testing & Benchmarks
 
 ```go
 // Run all tests
 go test ./...
- 
+
 // Run with race detection
 go test -race ./...
 
-// Run with coverage
+// Run with coverage (excluding examples)
 go test -coverprofile=coverage.txt ./...
 go tool cover -html=coverage.txt
 
 // Run benchmarks
-go test -bench=. -benchmem ./...
+go test -bench=. -benchmem -run '^$' .
 ```
+
+| Benchmark | What it measures |
+|-----------|------------------|
+| `BenchmarkExtractMethod` | gRPC method path → handler extraction |
+| `BenchmarkConfigValidate` | Config validation |
+| `BenchmarkServerNew` | Server construction |
+| `BenchmarkServerNewWithOptions` | Server construction with options |
+| `BenchmarkLoggingInterceptor` | Logging interceptor on a single RPC |
+| `BenchmarkMetricsInterceptor` | Metrics interceptor on a single RPC |
+| `BenchmarkValidationInterceptor` | protovalidate interceptor on a single RPC |
+| `BenchmarkTracingInterceptor` | Tracing interceptor on a single RPC |
 
 ## 📁 Project Structure
 
@@ -252,6 +266,7 @@ grpc-server/
 ├── options.go             # Server option patterns
 ├── options_test.go        # Options tests
 ├── logger.go              # Logger interface
+├── benchmarks_test.go     # Benchmarks
 ├── examples/
 │   ├── main.go            # Complete example application
 │   └── main_test.go       # Example integration tests

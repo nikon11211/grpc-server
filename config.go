@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -39,19 +40,19 @@ func (c Config) Validate() error {
 		return fmt.Errorf("config validation failed: %w", err)
 	}
 	if c.MaxRecvMsgSize <= 0 {
-		return fmt.Errorf("max_recv_msg_size must be positive")
+		return errors.New("max_recv_msg_size must be positive")
 	}
 	if c.MaxConnectionIdle <= 0 {
-		return fmt.Errorf("max_connection_idle must be positive")
+		return errors.New("max_connection_idle must be positive")
 	}
 	if c.Timeout <= 0 {
-		return fmt.Errorf("timeout must be positive")
+		return errors.New("timeout must be positive")
 	}
 	if c.MaxConnectionAge <= 0 {
-		return fmt.Errorf("max_connection_age must be positive")
+		return errors.New("max_connection_age must be positive")
 	}
 	if c.Time <= 0 {
-		return fmt.Errorf("time must be positive")
+		return errors.New("time must be positive")
 	}
 	return nil
 }
